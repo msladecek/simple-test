@@ -1,0 +1,10 @@
+#!/usr/bin/env bb
+
+
+(defn identify-tests [test-names])
+
+(defn run-tests)
+
+(println *command-line-args*)
+
+(System/exit 101)
