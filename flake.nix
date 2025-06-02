@@ -26,7 +26,20 @@
       in
       {
         formatter = treefmt-nix.lib.mkWrapper pkgs treefmt-config;
-        packages.default = (import ./default.nix { inherit pkgs; });
+        packages.default = pkgs.stdenv.mkDerivation {
+          name = "simple-test";
+          src = ./.;
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          installPhase = ''
+            mkdir -p $out/bin
+            install -Dm755 $src/simple-test $out/bin/simple-test
+          '';
+          postFixup = ''
+            wrapProgram $out/bin/simple-test \
+              --set PATH ${pkgs.lib.makeBinPath [ pkgs.babashka ]}
+          '';
+        };
+
         devShells.default = pkgs.mkShell {
           name = "simple-test";
           buildInputs = with pkgs; [
