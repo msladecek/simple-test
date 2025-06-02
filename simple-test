@@ -13,7 +13,7 @@
        default))))
 
 (defn -separator []
-  (str/join "" (repeat (-get-terminal-width) "-" )))
+  (str/join "" (repeat (-get-terminal-width) "-")))
 
 (defn println-err [& args]
   (binding [*out* *err*]
