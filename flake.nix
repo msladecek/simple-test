@@ -26,6 +26,7 @@
       in
       {
         formatter = treefmt-nix.lib.mkWrapper pkgs treefmt-config;
+        packages.default = (import ./default.nix { inherit pkgs; });
         devShells.default = pkgs.mkShell {
           name = "simple-test";
           buildInputs = with pkgs; [
