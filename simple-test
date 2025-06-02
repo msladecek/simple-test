@@ -1,10 +1,99 @@
 #!/usr/bin/env bb
+(require '[babashka.fs :as fs])
+(require '[babashka.process :refer [shell process]])
 
+(defn -get-terminal-width
+  ([] (-get-terminal-width 16))
+  ([default]
+   (try
+     (-> (shell {:out :string} "tput" "cols")
+         :out
+         edn/read-string)
+     (catch Exception e
+       default))))
 
-(defn identify-tests [test-names])
+(defn -separator []
+  (str/join "" (repeat (-get-terminal-width) "-" )))
 
-(defn run-tests)
+(defn println-err [& args]
+  (binding [*out* *err*]
+    (apply println args)))
 
-(println *command-line-args*)
+(defn -content-or-nil [path extension]
+  (when (fs/exists? (str path extension))
+    (slurp (str path extension))))
 
-(System/exit 101)
+(defn identify-test [test-name]
+  ;; TODO: add support for a .timeout file
+  {:name (fs/file-name test-name)
+   :path (fs/path test-name)
+   :executable? (fs/executable? test-name)
+   :cmd (-content-or-nil test-name ".cmd")
+   :stdin (-content-or-nil test-name ".stdin")
+   :stdout (-content-or-nil test-name ".stdout")
+   :stderr (-content-or-nil test-name ".stderr")
+   :exit (-content-or-nil test-name ".exit")})
+
+(defn executable? [test]
+  (or (:executable? test)
+      (:cmd test)))
+
+(defn run-test [test]
+  ;; TODO: timeout for proc with error "<test-name> didn't exit within 10 seconds, did you forget to specify stdin data?"
+  (let [cmd-str (if (:cmd test)
+                  (str/trim-newline (str/replace (:cmd test) #"\$filename" (str (:path test))))
+                  (str (:path test)))
+        proc (process {:cmd (str/split cmd-str #" ")
+                       :in (:stdin test)
+                       :out :string
+                       :err :string})]
+    @proc))
+
+(defn failed-assertions [test test-result]
+  (let [expected-exit-code (str/trim-newline (or (:exit test) "0"))]
+    (cond-> []
+      (not= expected-exit-code (str (:exit test-result)))
+      (conj {:param "exit code" :expected expected-exit-code :actual (:exit test-result)})
+
+      (and (:stdout test) (not= (:stdout test) (:out test-result)))
+      (conj {:param "stdout" :expected (:stdout test) :actual (:out test-result)})
+
+      (and (:stderr test) (not= (:stderr test) (:err test-result)))
+      (conj {:param "stderr" :expected (:stderr test) :actual (:err test-result)}))))
+
+;; TODO: support command line arg -/--help, which will print help
+
+(when-not (seq *command-line-args*)
+  (println-err "no tests specified")
+  (System/exit 1))
+
+(doseq [test-path *command-line-args*]
+  (when-not (fs/exists? test-path)
+    (println-err "file" test-path "does not exist")
+    (System/exit 1)))
+
+(def failed? (atom false))
+(doseq [test-path *command-line-args*]
+  (let [test (identify-test test-path)]
+    (if-not (executable? test)
+      (do
+        (println test-path "FAIL")
+        (println-err test-path "not executable"))
+      (let [test-result (run-test test)
+            fails (failed-assertions test test-result)]
+        (if-not (seq fails)
+          (println test-path "SUCCESS")
+          (do
+            (reset! failed? true)
+            (println test-path "FAIL")
+            (doseq [{:keys [param expected actual]} fails]
+              (println-err test-path "checking" param)
+              (println-err)
+              (println-err "Expected:")
+              (println-err expected)
+              (println-err "Actual:")
+              (println-err actual)
+              (println-err (-separator)))))))))
+
+(when @failed?
+  (System/exit 1))

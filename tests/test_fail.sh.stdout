@@ -1,0 +1,4 @@
+examples/fail/test_exit_code.py FAIL
+examples/fail/test_hello_world.py FAIL
+examples/fail/test_no_shebang.py FAIL
+examples/fail/test_output_streams.py FAIL

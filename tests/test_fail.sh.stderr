@@ -1,0 +1,35 @@
+examples/fail/test_exit_code.py checking exit code
+
+Expected:
+100
+Actual:
+2
+----------------
+examples/fail/test_hello_world.py checking stdout
+
+Expected:
+hello world
+
+Actual:
+ahoy matey
+
+----------------
+examples/fail/test_no_shebang.py not executable
+examples/fail/test_output_streams.py checking stdout
+
+Expected:
+hello on stdout!
+
+Actual:
+hello on stdout!
+bonjour sur stderr!
+
+----------------
+examples/fail/test_output_streams.py checking stderr
+
+Expected:
+bonjour sur stderr!
+
+Actual:
+
+----------------

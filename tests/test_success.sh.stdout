@@ -1,0 +1,6 @@
+examples/success/test_everything.py SUCCESS
+examples/success/test_exit_code.py SUCCESS
+examples/success/test_hello_world.py SUCCESS
+examples/success/test_input_stream.py SUCCESS
+examples/success/test_no_shebang.py SUCCESS
+examples/success/test_output_streams.py SUCCESS
