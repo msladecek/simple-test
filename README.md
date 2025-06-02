@@ -12,6 +12,7 @@ Call `simple-test` with one or more test files specified as command line argumen
 
 By default, the test file itself will be executed, so you must make sure it is executable.
 
+    $ chmod +x myscript.py
     $ cat myscript.py
     #!/usr/bin/env python3
     print("hello world!")
