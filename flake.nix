@@ -16,6 +16,28 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
+        default-package = pkgs.stdenv.mkDerivation {
+          name = "simple-test";
+          src = ./.;
+          doCheck = true;
+          nativeCheckInputs = with pkgs; [
+            babashka
+            python3
+            bash
+          ];
+          postPatch = ''
+            patchShebangs simple-test tests/ examples/
+          '';
+          checkPhase = ''
+            chmod +x simple-test tests/*.sh examples/*/*.py
+            chmod -x examples/fail/test_no_shebang.py
+            ./simple-test tests/*.sh
+          '';
+          installPhase = ''
+            mkdir -p $out/bin
+            install -Dm755 simple-test $out/bin/simple-test
+          '';
+        };
         treefmt-config = {
           projectRootFile = "flake.nix";
           programs.cljfmt.enable = true;
@@ -26,24 +48,14 @@
       in
       {
         formatter = treefmt-nix.lib.mkWrapper pkgs treefmt-config;
-        packages.default = pkgs.stdenv.mkDerivation {
-          name = "simple-test";
-          src = ./.;
-          nativeBuildInputs = [ pkgs.makeWrapper ];
-          installPhase = ''
-            mkdir -p $out/bin
-            install -Dm755 $src/simple-test $out/bin/simple-test
-          '';
-          postFixup = ''
-            wrapProgram $out/bin/simple-test \
-              --set PATH ${pkgs.lib.makeBinPath [ pkgs.babashka ]}
-          '';
-        };
-
+        packages.default = default-package;
+        packages.simple-test = default-package;
+        checks.test = default-package;
         devShells.default = pkgs.mkShell {
           name = "simple-test";
           buildInputs = with pkgs; [
-            python
+            bash
+            python3
             babashka
           ];
         };
