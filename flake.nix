@@ -16,7 +16,17 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        default-package = pkgs.stdenv.mkDerivation {
+        treefmtEval = treefmt-nix.lib.evalModule pkgs {
+          projectRootFile = "flake.nix";
+          programs.cljfmt.enable = true;
+          programs.cljfmt.includes = [ "simple-test" ];
+          programs.black.enable = true;
+          programs.nixfmt.enable = true;
+        };
+      in
+      {
+        formatter = treefmtEval.config.build.wrapper;
+        packages.default = pkgs.stdenv.mkDerivation {
           name = "simple-test";
           src = ./.;
           doCheck = true;
@@ -38,19 +48,10 @@
             install -Dm755 simple-test $out/bin/simple-test
           '';
         };
-        treefmt-config = {
-          projectRootFile = "flake.nix";
-          programs.cljfmt.enable = true;
-          programs.cljfmt.includes = [ "simple-test" ];
-          programs.black.enable = true;
-          programs.nixfmt.enable = true;
+        checks = {
+          test = self.packages.${system}.default;
+          format = treefmtEval.config.build.check self;
         };
-      in
-      {
-        formatter = treefmt-nix.lib.mkWrapper pkgs treefmt-config;
-        packages.default = default-package;
-        packages.simple-test = default-package;
-        checks.test = default-package;
         devShells.default = pkgs.mkShell {
           name = "simple-test";
           buildInputs = with pkgs; [
